@@ -1,4 +1,15 @@
+#!/usr/bin/env python
+
 import gym
+import gym_gazebo
+import time
+import numpy
+import random
+import time
+import rospy
+
+import matplotlib
+import matplotlib.pyplot as plt
 
 gym_env = ['CartPole-v0', 'MountainCar-v0']
 

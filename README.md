@@ -13,4 +13,5 @@ OpenAI Gym + Gazebo + ROS + tensorflow
 5. clone gym-gazebo (https://github.com/erlerobot/gym-gazebo) and remember to
   pip install -e .
 6. run turtlebot_setup.bash in gym_gazebo/envs/installation
-7. probably something else I've forgotten but deal with any errors one by one
+7. pip install scikit-image
+8. probably something else I've forgotten but deal with any errors one by one
