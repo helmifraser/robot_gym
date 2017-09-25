@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+  <!-- <rosparam file="$(find marty_laser)/cfg/laser_params.yaml" command="load" /> -->
+  <node pkg="robot_gym" type="turtlebot.py" name="turtlebot" output="screen"/>
+
+</launch>
