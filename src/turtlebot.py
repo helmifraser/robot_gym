@@ -15,6 +15,8 @@ from std_msgs.msg import Bool
 import matplotlib
 import matplotlib.pyplot as plt
 
+import mlp
+
 class TurtlebotLearning(object):
     """Reinforcement learning of a turtlebot using Gazebo and OpenAI Gym"""
 
@@ -31,6 +33,7 @@ class TurtlebotLearning(object):
         self.pid = os.getpid()
 
         self.wait_for_gym()
+        self.observation, self.reward, self.done, self.info = self.env.reset()
 
     def shutdown_hook(self):
         """
@@ -55,15 +58,23 @@ class TurtlebotLearning(object):
     def rosout_cb(self, msg):
         self.validation = msg.msg
 
+    def reset_and_update(self):
+        self.observation = self.env.reset()
+
     def reset_env_cb(self, msg):
         if msg.data == True:
-            self.env.reset()
+            # self.env.reset()
+            self.reset_and_update()
+            print("Observation: {}".format(self.return_observation()))
 
     def render_env(self):
         """
             This causes Gazebo to pop up, don't use it
         """
         self.env.render()
+
+    def return_observation(self):
+        return self.observation
 
     def return_rate(self):
         return self.rate
