@@ -34,6 +34,7 @@ class TurtlebotLearning(object):
 
         self.wait_for_gym()
         self.observation, self.reward, self.done, self.info = self.env.reset()
+        self.controller = mlp.MLP_NeuralNetwork(input=8,hidden=16,output=2)
 
     def shutdown_hook(self):
         """
@@ -79,6 +80,9 @@ class TurtlebotLearning(object):
     def return_rate(self):
         return self.rate
 
+    def return_mlp(self):
+        return self.controller
+
     def test(self):
         print("testing")
 
@@ -86,6 +90,9 @@ def main():
     try:
         instance = TurtlebotLearning()
         node_rate = instance.return_rate()
+        mlp_controller = instance.return_mlp()
+        wi = np.random.randn(8, 16)
+        wo = np.random.randn(16, 2)
 
         while rospy.is_shutdown() is not True:
             # instance.test()

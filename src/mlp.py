@@ -12,6 +12,7 @@ class MLP_NeuralNetwork(object):
         self.output = output
         # set up array of 1s for activations
         self.ai = [1.0] * self.input
+        print(self.ai)
         self.ah = [1.0] * self.hidden
         self.ao = [1.0] * self.output
         # create randomized weights
@@ -46,6 +47,9 @@ class MLP_NeuralNetwork(object):
             self.ao[k] = self.tanh(sum)
         return self.ao[:]
 
+    def change_weights(self, input_to_hidden, hidden_to_output):
+        self.wi = input_to_hidden
+        self.wo = hidden_to_output
 
 # def main():
 #
