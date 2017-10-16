@@ -1,40 +1,29 @@
 #!/usr/bin/env python
 
-import gym
-import gym_gazebo
+# import gym
+# import gym_gazebo
 import time
-import numpy
-import random
-import time
+import numpy as np
+
 import rospy
-import os
-import signal
-from rosgraph_msgs.msg import Log
-from std_msgs.msg import Bool
-
-import matplotlib
-import matplotlib.pyplot as plt
-
+import std_msgs.msg
+import geometry_msgs.msg
 import mlp
 
 class TurtlebotLearning(object):
     """Reinforcement learning of a turtlebot using Gazebo and OpenAI Gym"""
 
-    def __init__(self):
+    def __init__(self, input_nodes, hidden_nodes, output_nodes):
         super(TurtlebotLearning, self).__init__()
-        self.env = gym.make('GazeboCircuitTurtlebotLidar-v0')
         rospy.on_shutdown(self.shutdown_hook)
-        # rospy.init_node('turtlebot_learn')
+        rospy.init_node('turtlebot_learn')
+
         self.frequency = 10
         self.rate = rospy.Rate(self.frequency)
-        self.validation = "empty"
-        self.rosout_sub = rospy.Subscriber('/rosout', Log, self.rosout_cb)
-        self.reset_sub = rospy.Subscriber('/reset_env', Bool, self.reset_env_cb)
-        self.pid = os.getpid()
+        self.cmd_vel = rospy.Publisher('/mobile_base/commands/velocity', geometry_msgs.msg.Twist, queue_size=10)
 
-        self.wait_for_gym()
-        self.observation, self.reward, self.done, self.info = self.env.reset()
-        self.controller = mlp.MLP_NeuralNetwork(input=8,hidden=16,output=2)
+        self.controller = mlp.MLP_NeuralNetwork(input=input_nodes,hidden=hidden_nodes,output=output_nodes)
+        rospy.loginfo("Created NN")
 
     def shutdown_hook(self):
         """
@@ -45,37 +34,19 @@ class TurtlebotLearning(object):
         rospy.logwarn("Shutting down all the things fam")
         # os.kill(self.pid, signal.SIGKILL)
 
-    def wait_for_gym(self):
-        """
-            I know, I know it's so hacky it's disgusting
-        """
+    def create_zeroed_twist(self):
+        msg = geometry_msgs.msg.Twist()
+        msg.linear.x = 0
+        msg.linear.y = 0
+        msg.linear.z = 0
 
-        completed = False
-        while completed is False:
-            if "GazeboRosKobuki" in self.validation:
-                completed = True
-                rospy.logwarn("Successfully initialised, ready to learn! Run 'gzclient' in another terminal")
+        msg.angular.x = 0
+        msg.angular.y = 0
+        msg.angular.z = 0
+        return msg
 
-    def rosout_cb(self, msg):
-        self.validation = msg.msg
-
-    def reset_and_update(self):
-        self.observation = self.env.reset()
-
-    def reset_env_cb(self, msg):
-        if msg.data == True:
-            # self.env.reset()
-            self.reset_and_update()
-            print("Observation: {}".format(self.return_observation()))
-
-    def render_env(self):
-        """
-            This causes Gazebo to pop up, don't use it
-        """
-        self.env.render()
-
-    def return_observation(self):
-        return self.observation
+    def publish_vel(self, twist_msg):
+        self.cmd_vel.publish(twist_msg)
 
     def return_rate(self):
         return self.rate
@@ -88,14 +59,28 @@ class TurtlebotLearning(object):
 
 def main():
     try:
-        instance = TurtlebotLearning()
+        input_size = 8
+        hidden_size = 16
+        output_size = 2
+        instance = TurtlebotLearning(input_size, hidden_size, output_size)
         node_rate = instance.return_rate()
         mlp_controller = instance.return_mlp()
-        wi = np.random.randn(8, 16)
-        wo = np.random.randn(16, 2)
+
+        nn_inputs = np.ones(input_size)
+
+        wi = np.random.randn(input_size, hidden_size)
+        wo = np.random.randn(hidden_size, output_size)
+
+        twist_msg = instance.create_zeroed_twist()
+
+        commands = mlp_controller.feedForward(nn_inputs)
+        # print(commands)
+        twist_msg.linear.x = commands[0]
+        twist_msg.angular.z = commands[1]
 
         while rospy.is_shutdown() is not True:
             # instance.test()
+            instance.publish_vel(twist_msg)
             node_rate.sleep()
 
     except KeyboardInterrupt:
