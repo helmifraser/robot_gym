@@ -31,8 +31,10 @@
         args="load depthimage_to_laserscan/DepthImageToLaserScanNodelet laserscan_nodelet_manager">
     <param name="scan_height" value="10"/>
     <param name="output_frame_id" value="/camera_depth_frame"/>
-    <param name="range_min" value="0.45"/>
+    <param name="range_min" value="0.2"/>
     <remap from="image" to="/camera/depth/image_raw"/>
     <remap from="scan" to="/scan"/>
   </node>
+
+  <node pkg="robot_gym" type="turtlebot.py" name="turtlebot" output="screen"/>
 </launch>
