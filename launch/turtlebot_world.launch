@@ -6,7 +6,7 @@
   <arg name="battery"   value="$(optenv TURTLEBOT_BATTERY /proc/acpi/battery/BAT0)"/>  <!-- /proc/acpi/battery/BAT0 -->
   <arg name="gui" default="false"/>
   <arg name="stacks"    value="$(optenv TURTLEBOT_STACKS hexagons)"/>  <!-- circles, hexagons -->
-  <arg name="3d_sensor" value="$(optenv TURTLEBOT_3D_SENSOR kinect)"/>  <!-- kinect, asus_xtion_pro -->
+  <arg name="3d_sensor" value="$(optenv TURTLEBOT_3D_SENSOR hokuyo)"/>  <!-- kinect, asus_xtion_pro -->
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="use_sim_time" value="true"/>
@@ -31,10 +31,10 @@
         args="load depthimage_to_laserscan/DepthImageToLaserScanNodelet laserscan_nodelet_manager">
     <param name="scan_height" value="10"/>
     <param name="output_frame_id" value="/camera_depth_frame"/>
-    <param name="range_min" value="0.2"/>
+    <param name="range_min" value="0.0"/>
     <remap from="image" to="/camera/depth/image_raw"/>
-    <remap from="scan" to="/scan"/>
+    <remap from="scan" to="/kinect_scan"/>
   </node>
 
-  <node pkg="robot_gym" type="turtlebot.py" name="turtlebot" output="screen"/>
+  <!-- <node pkg="robot_gym" type="turtlebot.py" name="turtlebot" output="screen"/> -->
 </launch>
