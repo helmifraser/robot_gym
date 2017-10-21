@@ -1,7 +1,9 @@
 # robot-gym
-OpenAI Gym + Gazebo + ROS + tensorflow
+Gazebo environment for testing reinforcement learning and evolutionary robotics
 
 # Installation
+
+***Most of these are now redundant since the OpenAI and Tensorflow dependencies were removed***
 
 1. create a virtualenv for the whole thing (use virtualenvwrapper)
 2. enable global site packages (toggleglobalsitepackages)
