@@ -17,3 +17,6 @@ Gazebo environment for testing reinforcement learning and evolutionary robotics
 6. run turtlebot_setup.bash in gym_gazebo/envs/installation
 7. pip install scikit-image
 8. probably something else I've forgotten but deal with any errors one by one
+
+
+**HARD CODE 'kobuki.launch.xml' in 'turtlebot_gazebo' to point to /opt/ros/kinetic/share/turtlebot_description/robots/kobuki_hexagons_hokuyo.urdf.xacro**

@@ -34,6 +34,7 @@ class TurtlebotLearning(object):
 
         self.cmd_msg = self.create_zeroed_twist()
         self.segmented_laser_data = [0, 0, 0, 0, 0, 0, 0]
+        self.scale_params = [0.10, 30.0, -2.5, 2.5]
 
         self.controller = mlp.MLP_NeuralNetwork(input=input_nodes,hidden=hidden_nodes,output=output_nodes)
         rospy.loginfo("Created NN")
@@ -76,7 +77,7 @@ class TurtlebotLearning(object):
         if math.isnan(msg.ranges[0]):
             self.segmented_laser_data[0] = msg.range_max + 10
         else:
-            self.segmented_laser_data[0] = msg.ranges[0]
+            self.segmented_laser_data[0] = self.scale_value(msg.ranges[0])
 
         inc = int(math.floor(len(msg.ranges)/7))
         # print(inc)
@@ -87,7 +88,7 @@ class TurtlebotLearning(object):
                     self.segmented_laser_data[int(i/inc)] = msg.range_max + 10
                 else:
                     # rospy.logerr("shit is not nan {}".format(i))
-                    self.segmented_laser_data[int(i/inc)] = msg.ranges[i]
+                    self.segmented_laser_data[int(i/inc)] = self.scale_value(msg.ranges[i])
             except Exception as e:
                 rospy.logerr(i)
 
@@ -96,7 +97,7 @@ class TurtlebotLearning(object):
             self.segmented_laser_data[6] = msg.range_max + 10
         else:
             # rospy.logerr("shit is not nan {}".format(i))
-            self.segmented_laser_data[6] = msg.ranges[inc*7]
+            self.segmented_laser_data[6] = self.scale_value(msg.ranges[inc*7])
 #
         # rospy.logwarn("msg: {}".format(msg.ranges[inc*7]))
 
@@ -115,6 +116,17 @@ class TurtlebotLearning(object):
 
     def return_laser_msg(self):
         return self.laser_msg
+
+    def scale_value(self, value, parameters=self.scale_params):
+        out = (((parameters[3] - parameters[2]) * (value - parameters[0])) /
+            (parameters[1] - parameters[0])) + parameters[2]
+
+        if out > 2.5:
+            out = 2.5
+        elif out < -2.5:
+            out = -2.5
+
+        return out
 
     def return_segmented_laser_data(self):
         return self.segmented_laser_data
