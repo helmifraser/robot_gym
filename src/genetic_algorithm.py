@@ -18,16 +18,9 @@ class GeneticAlgorithm(object):
             List -> List -> np array"""
 
         generation = [None]*pop_size
-        weight_matrix = [None, None]
 
         for individual in range (0, pop_size, 1):
-            wi = np.random.randn(net_dims[0], net_dims[1])
-            wo = np.random.randn(net_dims[1], net_dims[2])
-
-            weight_matrix[0] = wi
-            weight_matrix[1] = wo
-
-            generation[individual] = weight_matrix
+            generation[individual] = [np.random.randn(net_dims[0], net_dims[1]), np.random.randn(net_dims[1], net_dims[2])]
 
         return generation
 
@@ -41,11 +34,15 @@ class GeneticAlgorithm(object):
             print("Mutate rate: {} Non zero: {} Where: {} Total weights: {}".format(mutate_rate, np.count_nonzero(m), np.where(m), individual[layer][m].size))
 
     def crossover(self, parent_a, parent_b, rate=0.5):
+        child = parent_a
         for layer in range(0, len(parent_a)):
             r = np.random.random(size=parent_a[layer].shape)
             m = r < rate
-            parent_a[layer][m] = parent_b[layer][m]
+            # np.copyto(child[layer], parent_a[layer], where=not m)
+            # np.copyto(child[layer], parent_b[layer], where=m)
+
             # print("Cross rate: {} Non zero: {} Where: {} Total weights: {}".format(rate, np.count_nonzero(m), np.where(m), parent_a[layer][m].size))
+        return child
 
     def return_network_dimensions(self):
         return self.network_dimensions[0], self.network_dimensions[1], self.network_dimensions[2]
@@ -54,13 +51,12 @@ def main():
     dim = [8, 16, 2]
     ga = GeneticAlgorithm(dim)
     generation_zero = ga.initialise_population()
-    print("equal {}".format(np.array_equal(generation_zero[0], generation_zero[1])))
-    # print(generation_zero[0])
+    print("equal {}".format(np.array_equal(generation_zero[0][1], generation_zero[1][1])))
     # ga.mutate(generation_zero[0], 0.05, 1)
-    # print(generation_zero[0])
-    # print("parent_a: {} parent_b: {}".format(generation_zero[0], generation_zero[1]))
-    ga.crossover(generation_zero[0], generation_zero[1])
-    # print("parent_a: {} parent_b: {}".format(generation_zero[0], generation_zero[1]))
+    print("parent_a: {} \n parent_b: {}".format(generation_zero[0][1], generation_zero[1][1]))
+    new_guy = ga.crossover(generation_zero[0], generation_zero[1])
+    print("new guy: {}".format(new_guy[1]))
+    # print("parent_a: {} \n parent_b: {}".format(generation_zero[0][1], generation_zero[1][1]))
     # input_nodes, hidden_nodes, output_nodes = ga.return_network_dimensions()
     # print("In: {} Hidden: {} Out: {}".format(input_nodes, hidden_nodes, output_nodes))
 
