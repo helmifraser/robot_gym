@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import time
 
 class GeneticAlgorithm(object):
     """Genetic algorithm for neuroevolution of a Turtlebot"""
@@ -24,22 +25,22 @@ class GeneticAlgorithm(object):
 
         return generation
 
-    def mutate(self, individual, mutate_rate=0.05, severity=1.0):
+    def mutate(self, individual, mutate_rate=0.01, severity=1.0):
         """Vectorised, in-place mutation yay"""
 
         for layer in range(0, len(individual)):
             r = np.random.random(size=individual[layer].shape)
             m = r < mutate_rate
             individual[layer][m] = np.random.normal(loc=individual[layer][m], scale=severity)
-            print("Mutate rate: {} Non zero: {} Where: {} Total weights: {}".format(mutate_rate, np.count_nonzero(m), np.where(m), individual[layer][m].size))
+            # print("Mutate rate: {} Non zero: {} Where: {} Total weights: {}".format(mutate_rate, np.count_nonzero(m), np.where(m), individual[layer][m].size))
 
     def crossover(self, parent_a, parent_b, rate=0.5):
         child = parent_a
         for layer in range(0, len(parent_a)):
             r = np.random.random(size=parent_a[layer].shape)
             m = r < rate
-            # np.copyto(child[layer], parent_a[layer], where=not m)
-            # np.copyto(child[layer], parent_b[layer], where=m)
+            np.putmask(child[layer], np.invert(m), parent_a[layer])
+            np.putmask(child[layer], m, parent_b[layer])
 
             # print("Cross rate: {} Non zero: {} Where: {} Total weights: {}".format(rate, np.count_nonzero(m), np.where(m), parent_a[layer][m].size))
         return child
@@ -54,7 +55,10 @@ def main():
     print("equal {}".format(np.array_equal(generation_zero[0][1], generation_zero[1][1])))
     # ga.mutate(generation_zero[0], 0.05, 1)
     print("parent_a: {} \n parent_b: {}".format(generation_zero[0][1], generation_zero[1][1]))
+    # t = time.time()
     new_guy = ga.crossover(generation_zero[0], generation_zero[1])
+    # elapsed = time.time() - t
+    # print("time: {}".format(elapsed))
     print("new guy: {}".format(new_guy[1]))
     # print("parent_a: {} \n parent_b: {}".format(generation_zero[0][1], generation_zero[1][1]))
     # input_nodes, hidden_nodes, output_nodes = ga.return_network_dimensions()
