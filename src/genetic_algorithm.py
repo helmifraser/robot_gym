@@ -45,6 +45,25 @@ class GeneticAlgorithm(object):
             # print("Cross rate: {} Non zero: {} Where: {} Total weights: {}".format(rate, np.count_nonzero(m), np.where(m), parent_a[layer][m].size))
         return child
 
+    def tournament_selection(self, generation, fitness_gen, k=3):
+        """Returns the index of the winner of tournament selection"""
+
+        tournament_winner = 0
+        best_fitness = 0
+        competitors = [None]*k
+
+        for i in range(0, k, 1):
+            competitors[i] = random.randint(0, len(generation) - 1)
+            current_fitness = fitness_gen[competitors[i]]
+            if current_fitness > best_fitness:
+                best_fitness = current_fitness
+                tournament_winner = competitors[i]
+
+            # print("current fit: {} best fit: {}".format(current_fitness, best_fitness))
+
+        # print("competitors {}".format(competitors))
+        return tournament_winner
+
     def return_network_dimensions(self):
         return self.network_dimensions[0], self.network_dimensions[1], self.network_dimensions[2]
 
@@ -52,17 +71,13 @@ def main():
     dim = [8, 16, 2]
     ga = GeneticAlgorithm(dim)
     generation_zero = ga.initialise_population()
-    print("equal {}".format(np.array_equal(generation_zero[0][1], generation_zero[1][1])))
+    fitness_vals = np.random.randint(100, size=len(generation_zero))
+    winner = ga.tournament_selection(generation_zero, fitness_vals)
     # ga.mutate(generation_zero[0], 0.05, 1)
-    print("parent_a: {} \n parent_b: {}".format(generation_zero[0][1], generation_zero[1][1]))
     # t = time.time()
-    new_guy = ga.crossover(generation_zero[0], generation_zero[1])
+    # new_guy = ga.crossover(generation_zero[0], generation_zero[1])
     # elapsed = time.time() - t
     # print("time: {}".format(elapsed))
-    print("new guy: {}".format(new_guy[1]))
-    # print("parent_a: {} \n parent_b: {}".format(generation_zero[0][1], generation_zero[1][1]))
-    # input_nodes, hidden_nodes, output_nodes = ga.return_network_dimensions()
-    # print("In: {} Hidden: {} Out: {}".format(input_nodes, hidden_nodes, output_nodes))
 
 if __name__ == '__main__':
     main()
