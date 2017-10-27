@@ -2,6 +2,9 @@ import numpy as np
 import random
 import time
 
+default = object()
+
+
 class GeneticAlgorithm(object):
     """Genetic algorithm for neuroevolution of a Turtlebot"""
 
@@ -18,10 +21,11 @@ class GeneticAlgorithm(object):
 
             List -> List -> np array"""
 
-        generation = [None]*pop_size
+        generation = [None] * pop_size
 
-        for individual in range (0, pop_size, 1):
-            generation[individual] = [np.random.randn(net_dims[0], net_dims[1]), np.random.randn(net_dims[1], net_dims[2])]
+        for individual in range(0, pop_size, 1):
+            generation[individual] = [np.random.randn(net_dims[0], net_dims[1]),
+                                      np.random.randn(net_dims[1], net_dims[2])]
 
         return generation
 
@@ -31,7 +35,8 @@ class GeneticAlgorithm(object):
         for layer in range(0, len(individual)):
             r = np.random.random(size=individual[layer].shape)
             m = r < mutate_rate
-            individual[layer][m] = np.random.normal(loc=individual[layer][m], scale=severity)
+            individual[layer][m] = np.random.normal(
+                loc=individual[layer][m], scale=severity)
             # print("Mutate rate: {} Non zero: {} Where: {} Total weights: {}".format(mutate_rate, np.count_nonzero(m), np.where(m), individual[layer][m].size))
 
     def crossover(self, parent_a, parent_b, rate=0.5):
@@ -50,7 +55,7 @@ class GeneticAlgorithm(object):
 
         tournament_winner = 0
         best_fitness = 0
-        competitors = [None]*k
+        competitors = [None] * k
 
         for i in range(0, k, 1):
             competitors[i] = random.randint(0, len(generation) - 1)
@@ -64,8 +69,18 @@ class GeneticAlgorithm(object):
         # print("competitors {}".format(competitors))
         return tournament_winner
 
+    def create_new_generation(self,
+                              current_generation,
+                              fitness_gen,
+                              elitism=1,
+                              new_gen_size=default):
+
+        if new_gen_size is default:
+            new_gen_size = len(current_generation)
+
     def return_network_dimensions(self):
         return self.network_dimensions[0], self.network_dimensions[1], self.network_dimensions[2]
+
 
 def main():
     dim = [8, 16, 2]
@@ -73,11 +88,13 @@ def main():
     generation_zero = ga.initialise_population()
     fitness_vals = np.random.randint(100, size=len(generation_zero))
     winner = ga.tournament_selection(generation_zero, fitness_vals)
+    ga.create_new_generation(generation_zero, fitness_vals)
     # ga.mutate(generation_zero[0], 0.05, 1)
     # t = time.time()
     # new_guy = ga.crossover(generation_zero[0], generation_zero[1])
     # elapsed = time.time() - t
     # print("time: {}".format(elapsed))
+
 
 if __name__ == '__main__':
     main()
