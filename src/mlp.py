@@ -12,11 +12,11 @@ class MLP_NeuralNetwork(object):
         self.output = output
         # set up array of 1s for activations
         self.ai = [1.0] * self.input
-        print(self.ai)
         self.ah = [1.0] * self.hidden
         self.ao = [1.0] * self.output
         # create randomized weights
         self.wi = np.random.randn(self.input, self.hidden)
+        print(np.shape(self.wi))
         self.wo = np.random.randn(self.hidden, self.output)
         # create arrays of 0 for changes
         self.ci = np.zeros((self.input, self.hidden))
@@ -51,28 +51,13 @@ class MLP_NeuralNetwork(object):
         self.wi = input_to_hidden
         self.wo = hidden_to_output
 
-# def main():
-#     input_size = 8
-#     hidden_size = 16
-#     output_size = 2
-#
-#     my_mlp = MLP_NeuralNetwork(input=input_size, hidden=hidden_size, output=output_size)
-#     # mlp_in = np.random.randn(8)
-#     mlp_in = np.ones(8)
-#
-#     print("Input: {}".format(mlp_in))
-#
-#     output = my_mlp.feedForward(mlp_in)
-#     print("Output 1: {}".format(output))
-#
-#     print("Changing weights")
-#     wi = np.random.randn(input_size + 1, hidden_size)
-#     wo = np.random.randn(hidden_size, output_size)
-#     my_mlp.change_weights(wi, wo)
-#
-#     output = my_mlp.feedForward(mlp_in)
-#     print("Output 2: {}".format(output))
-#
-#
-# if __name__ == '__main__':
-#     main()
+def main():
+
+    my_mlp = MLP_NeuralNetwork(input=8, hidden=16, output=2)
+    mlp_in = np.random.randn(8)
+    # print(mlp_in)
+    output = my_mlp.feedForward(mlp_in)
+    # print(output)
+
+if __name__ == '__main__':
+    main()

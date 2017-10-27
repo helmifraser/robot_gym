@@ -14,7 +14,7 @@ class GeneticAlgorithm(object):
         # dimensions are number of input/hidden/ouput nodes in an array
         self.network_dimensions = network_dimensions
         self.mutate_rate = 0.05
-        # random.seed(a=42)
+
 
     def initialise_population(self, pop_size=50, net_dims=[8, 16, 2]):
         """A generation contains pop_size individuals, which contain two matrices:
@@ -65,9 +65,9 @@ class GeneticAlgorithm(object):
                 best_fitness = current_fitness
                 tournament_winner = competitors[i]
 
-            print("current fit: {} best fit: {}".format(current_fitness, best_fitness))
+            # print("current fit: {} best fit: {}".format(current_fitness, best_fitness))
 
-        print("competitors {}".format(competitors))
+        # print("tournament_selection: competitors {}".format(competitors))
         # print("tournament_selection: {}".format(generation[tournament_winner]))
         return generation[tournament_winner]
 
@@ -90,11 +90,8 @@ class GeneticAlgorithm(object):
 
         for offspring in range(elitism, new_gen_size, 1):
             parent_a = self.tournament_selection(current_generation, fitness_gen, k)
-            print("parent a: {}".format(parent_a[1]))
             parent_b = self.tournament_selection(current_generation, fitness_gen, k)
             child = self.crossover(parent_a, parent_b)
-            # print("parent b: {}".format(parent_b[1]))
-            # print("child: {}".format(child[1]))
             # new_gen[offspring] = [item for item in child]
             new_gen[offspring] = copy.deepcopy(child)
 
@@ -110,8 +107,10 @@ class GeneticAlgorithm(object):
         fitness_vals = fitness_vals[indices[::-1]]
         sorted_gen = [None]*len(generation)
 
+        count = 0
         for index in indices:
-            sorted_gen[0] = copy.deepcopy(generation[index])
+            sorted_gen[count] = copy.deepcopy(generation[index])
+            count+=1
 
         # print("indices: {}".format(indices))
         return sorted_gen, fitness_vals
@@ -125,15 +124,14 @@ def main():
     dim = [8, 16, 2]
     ga = GeneticAlgorithm(dim)
     generation_zero = ga.initialise_population()
-    fitness_vals = np.random.randint(100, size=len(generation_zero))
-
+    # fitness_vals = np.random.randint(100, size=len(generation_zero))
+    fitness_vals = np.random.random(size=[len(generation_zero)])
     generation_zero, fitness_vals = ga.sort_by_fitness(generation_zero, fitness_vals)
 
-    # winner = ga.tournament_selection(generation_zero, fitness_vals)
-    generation_one = ga.create_new_generation(generation_zero, fitness_vals)
+    # winner = ga.tournament_selection(generation=generation_zero, fitness_gen=fitness_vals)
+    # print(winner)
+    generation_one = ga.create_new_generation(current_generation=generation_zero, fitness_gen=fitness_vals)
 
-
-    # ga.mutate(generation_zero[0], 0.05, 1)
     # t = time.time()
     # new_guy = ga.crossover(generation_zero[0], generation_zero[1])
     # elapsed = time.time() - t
