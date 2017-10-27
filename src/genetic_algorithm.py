@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import time
+import copy
 
 default = object()
 
@@ -51,7 +52,7 @@ class GeneticAlgorithm(object):
         return child
 
     def tournament_selection(self, generation, fitness_gen, k=3):
-        """Returns the index of the winner of tournament selection"""
+        """Returns the winner of tournament selection"""
 
         tournament_winner = 0
         best_fitness = 0
@@ -67,16 +68,31 @@ class GeneticAlgorithm(object):
             # print("current fit: {} best fit: {}".format(current_fitness, best_fitness))
 
         # print("competitors {}".format(competitors))
-        return tournament_winner
+        return generation[tournament_winner]
 
     def create_new_generation(self,
                               current_generation,
                               fitness_gen,
                               elitism=1,
+                              k=3,
                               new_gen_size=default):
+
 
         if new_gen_size is default:
             new_gen_size = len(current_generation)
+
+        new_gen = [None]*new_gen_size
+
+        for offspring in range(0, new_gen_size, 1):
+            parent_a = self.tournament_selection(current_generation, fitness_gen, k)
+            parent_b = self.tournament_selection(current_generation, fitness_gen, k)
+            child = self.crossover(parent_a, parent_b)
+            print("parent a: {}".format(parent_a[1]))
+            print("parent b: {}".format(parent_b[1]))
+            print("child: {}".format(child[1]))
+            new_gen[offspring] = copy.deepcopy(child)
+
+        return new_gen
 
     def return_network_dimensions(self):
         return self.network_dimensions[0], self.network_dimensions[1], self.network_dimensions[2]
@@ -88,7 +104,11 @@ def main():
     generation_zero = ga.initialise_population()
     fitness_vals = np.random.randint(100, size=len(generation_zero))
     winner = ga.tournament_selection(generation_zero, fitness_vals)
-    ga.create_new_generation(generation_zero, fitness_vals)
+    generation_one = ga.create_new_generation(generation_zero, fitness_vals, new_gen_size=50)
+
+    # print("gen 0: {}".format(generation_zero[0][1]))
+    # print("gen 1: {}".format(generation_one[0][1]))
+
     # ga.mutate(generation_zero[0], 0.05, 1)
     # t = time.time()
     # new_guy = ga.crossover(generation_zero[0], generation_zero[1])
