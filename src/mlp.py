@@ -42,11 +42,23 @@ class MLP_NeuralNetwork(object):
         self.wi = input_to_hidden
         self.wo = hidden_to_output
 
+    def save_weights_to_file(self, filename=None):
+        if filename is None:
+            print("save_weights_to_file: Filename unset, can't save!")
+            return 0
+
+        filename_wi = filename + "-wi"
+        filename_wo = filename + "-wo"
+
+        np.save(filename_wi, self.wi)
+        np.save(filename_wo, self.wo)
+
 def main():
 
-    my_mlp = MLP_NeuralNetwork(input=8, hidden=16, output=2)
+    my_mlp = MLP_NeuralNetwork(input=7, hidden=16, output=2)
     my_mlp.change_weights(input_to_hidden=np.random.randn(my_mlp.input, my_mlp.hidden), hidden_to_output=np.random.randn(my_mlp.hidden, my_mlp.output))
-    mlp_in = np.random.randn(8)
+    # my_mlp.save_weights_to_file("my_mlp")
+    mlp_in = np.random.randn(7)
     output = my_mlp.feedForward(mlp_in)
     print(output)
 

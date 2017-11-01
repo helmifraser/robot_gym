@@ -3,18 +3,22 @@
 # import gym
 # import gym_gazebo
 import time
-import numpy as np#
+import numpy as np
 import math
 
 import rospy
 import std_msgs.msg, geometry_msgs.msg, sensor_msgs.msg
+from rospy.numpy_msg import numpy_msg
 import mlp
 
-class TurtlebotLearning(object):
+default = object()
+
+
+class TurtlebotController(object):
     """Reinforcement learning of a turtlebot using Gazebo and OpenAI Gym"""
 
     def __init__(self, input_nodes, hidden_nodes, output_nodes):
-        super(TurtlebotLearning, self).__init__()
+        super(TurtlebotController, self).__init__()
         rospy.on_shutdown(self.shutdown_hook)
         rospy.init_node('turtlebot_learn')
 
@@ -34,7 +38,7 @@ class TurtlebotLearning(object):
 
         self.cmd_msg = self.create_zeroed_twist()
         self.segmented_laser_data = [0, 0, 0, 0, 0, 0, 0]
-        self.scale_params = [0.10, 30.0, -2.5, 2.5]
+        self.scale_params = [0.10, 10, -1, 1]
 
         self.controller = mlp.MLP_NeuralNetwork(input=input_nodes,hidden=hidden_nodes,output=output_nodes)
         rospy.loginfo("Created NN")
@@ -73,33 +77,12 @@ class TurtlebotLearning(object):
 
     def scan_cb(self, msg):
         self.laser_msg = msg
+        laser_ranges = np.asarray(msg.ranges)
+        laser_ranges = np.nan_to_num(laser_ranges)
+        laser_ranges = np.where(laser_ranges == 0, msg.range_max + 10, laser_ranges)
+        self.segmented_laser_data = laser_ranges[0:266:round(len(laser_ranges)/7)]
+        # print(self.segmented_laser_data)
 
-        if math.isnan(msg.ranges[0]):
-            self.segmented_laser_data[0] = msg.range_max + 10
-        else:
-            self.segmented_laser_data[0] = self.scale_value(msg.ranges[0])
-
-        inc = int(math.floor(len(msg.ranges)/7))
-        # print(inc)
-        for i in range(inc, len(msg.ranges) - inc, inc):
-            try:
-                if math.isnan(msg.ranges[i]):
-                    # rospy.logerr("shit is nan {}".format(i))
-                    self.segmented_laser_data[int(i/inc)] = msg.range_max + 10
-                else:
-                    # rospy.logerr("shit is not nan {}".format(i))
-                    self.segmented_laser_data[int(i/inc)] = self.scale_value(msg.ranges[i])
-            except Exception as e:
-                rospy.logerr(i)
-
-        if math.isnan(msg.ranges[inc*7]):
-            # rospy.logerr("shit is nan {}".format(i))
-            self.segmented_laser_data[6] = msg.range_max + 10
-        else:
-            # rospy.logerr("shit is not nan {}".format(i))
-            self.segmented_laser_data[6] = self.scale_value(msg.ranges[inc*7])
-#
-        # rospy.logwarn("msg: {}".format(msg.ranges[inc*7]))
 
     def extract_scan_params(self):
         self.scan_angle_min = self.laser_msg.angle_min
@@ -117,14 +100,17 @@ class TurtlebotLearning(object):
     def return_laser_msg(self):
         return self.laser_msg
 
-    def scale_value(self, value, parameters=self.scale_params):
+    def scale_value(self, value, parameters=default):
+        if parameters is default:
+            parameters = self.scale_params
+
         out = (((parameters[3] - parameters[2]) * (value - parameters[0])) /
             (parameters[1] - parameters[0])) + parameters[2]
 
-        if out > 2.5:
-            out = 2.5
-        elif out < -2.5:
-            out = -2.5
+        if out > parameters[-1]:
+            out = parameters[-1]
+        elif out < -1*parameters[-1]:
+            out = -1*parameters[-1]
 
         return out
 
@@ -145,7 +131,7 @@ def main():
         input_size = 8
         hidden_size = 16
         output_size = 2
-        instance = TurtlebotLearning(input_size, hidden_size, output_size)
+        instance = TurtlebotController(input_size, hidden_size, output_size)
         node_rate = instance.return_rate()
         mlp_controller = instance.return_mlp()
 
@@ -161,9 +147,9 @@ def main():
         twist_msg.linear.x = commands[0]
         twist_msg.angular.z = commands[1]
 
-        hello = "yuo"
-        start = input('Enter anything to start: ')
-        print("all good fam", start)
+        # hello = "yuo"
+        # start = input('Enter anything to start: ')
+        # print("all good fam", start)
 
         while rospy.is_shutdown() is not True:
 
@@ -176,9 +162,9 @@ def main():
             # angle_increment = angle_increment*180/math.pi
             # print("min: {}, max: {}, inc: {}".format(angle_min, angle_max, angle_increment))
 
-            laser_msg = instance.return_segmented_laser_data()
-            print("vals: {}".format(laser_msg))
-            instance.drive(laser_msg)
+            # laser_msg = instance.return_segmented_laser_data()
+            # print("vals: {}".format(laser_msg))
+            # instance.drive(laser_msg)
             node_rate.sleep()
 
     except KeyboardInterrupt:
