@@ -16,7 +16,7 @@ class GeneticAlgorithm(object):
         self.mutate_rate = 0.05
 
 
-    def initialise_population(self, pop_size=50, net_dims=[8, 16, 2]):
+    def initialise_population(self, pop_size=50, net_dims=[7, 16, 2]):
         """A generation contains pop_size individuals, which contain two matrices:
             input to hidden and hidden to output.
 
@@ -121,7 +121,7 @@ class GeneticAlgorithm(object):
 
 
 def main():
-    dim = [8, 16, 2]
+    dim = [7, 16, 2]
     ga = GeneticAlgorithm(dim)
     generation_zero = ga.initialise_population()
     # fitness_vals = np.random.randint(100, size=len(generation_zero))

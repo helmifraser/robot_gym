@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-
-# import gym
-# import gym_gazebo
 import time
 import numpy as np
 import math
