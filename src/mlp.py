@@ -53,12 +53,23 @@ class MLP_NeuralNetwork(object):
         np.save(filename_wi, self.wi)
         np.save(filename_wo, self.wo)
 
+    def load_weights(self, filename=None):
+        if filename is None:
+            print("load_weights: Filename unset, can't load!")
+            return 0
+
+        filename_wo = filename + "-wo.npy"
+        filename_wi = filename + "-wi.npy"
+
+        self.change_weights(np.load(filename_wi), np.load(filename_wo))
+
 def main():
 
     my_mlp = MLP_NeuralNetwork(input=7, hidden=16, output=2)
-    my_mlp.change_weights(input_to_hidden=np.random.randn(my_mlp.input, my_mlp.hidden), hidden_to_output=np.random.randn(my_mlp.hidden, my_mlp.output))
-    # my_mlp.save_weights_to_file("my_mlp")
-    mlp_in = np.random.randn(7)
+    # my_mlp.change_weights(input_to_hidden=np.random.randn(my_mlp.input, my_mlp.hidden), hidden_to_output=np.random.randn(my_mlp.hidden, my_mlp.output))
+    # my_mlp.save_weights_to_file("weights")
+    my_mlp.load_weights(filename="weights")
+    mlp_in = np.ones(7)
     output = my_mlp.feedForward(mlp_in)
     print(output)
 
