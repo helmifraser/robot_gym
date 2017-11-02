@@ -5,11 +5,12 @@
 import time
 import numpy as np
 import math
+import sys
+import os
 
 import rospy
 import std_msgs.msg, geometry_msgs.msg, sensor_msgs.msg
 from rospy.numpy_msg import numpy_msg
-import mlp
 
 default = object()
 
@@ -17,10 +18,10 @@ default = object()
 class TurtlebotController(object):
     """Reinforcement learning of a turtlebot using Gazebo and OpenAI Gym"""
 
-    def __init__(self, input_nodes, hidden_nodes, output_nodes):
+    def __init__(self):
         super(TurtlebotController, self).__init__()
         rospy.on_shutdown(self.shutdown_hook)
-        rospy.init_node('turtlebot_learn')
+        rospy.init_node('turtlebot_controller')
 
         self.frequency = 10
         self.rate = rospy.Rate(self.frequency)
@@ -39,9 +40,7 @@ class TurtlebotController(object):
         self.cmd_msg = self.create_zeroed_twist()
         self.segmented_laser_data = [0, 0, 0, 0, 0, 0, 0]
         self.scale_params = [0.10, 10, -1, 1]
-
-        self.controller = mlp.MLP_NeuralNetwork(input=input_nodes,hidden=hidden_nodes,output=output_nodes)
-        rospy.loginfo("Created NN")
+        rospy.loginfo("Turtlebot: Completed init")
 
     def shutdown_hook(self):
         """
@@ -49,20 +48,9 @@ class TurtlebotController(object):
             before actual shutdown occurs.
         """
 
-        rospy.logwarn("Shutting down all the things fam")
-        # os.kill(self.pid, signal.SIGKILL)
-
-    def drive(self, segmented_laser_data):
-        # if math.isnan(segmented_laser_data)
-        self.cmd_msg.linear.x = (segmented_laser_data[0] + segmented_laser_data[3] + segmented_laser_data[6])/(self.laser_msg.range_max + 10)
-        self.cmd_msg.angular.z = (segmented_laser_data[6] - segmented_laser_data[0])/(self.laser_msg.range_max + 10)
-        rospy.loginfo("linear x: {} angular z: {}".format(self.cmd_msg.linear.x, self.cmd_msg.angular.z))
-
-        if math.isnan(self.cmd_msg.linear.x) or math.isnan(self.cmd_msg.angular.z):
-            return
-
-        self.publish_vel(self.cmd_msg)
-        # if segmented_laser_data[0] < 0.5:
+        rospy.logwarn("Turtlebot: Shutting down all the things fam")
+        # sys.exit()
+        os.system('kill %d' % os.getpid())
 
     def create_zeroed_twist(self):
         msg = geometry_msgs.msg.Twist()
@@ -80,7 +68,8 @@ class TurtlebotController(object):
         laser_ranges = np.asarray(msg.ranges)
         laser_ranges = np.nan_to_num(laser_ranges)
         laser_ranges = np.where(laser_ranges == 0, msg.range_max + 10, laser_ranges)
-        self.segmented_laser_data = laser_ranges[0:266:round(len(laser_ranges)/7)]
+        self.segmented_laser_data = laser_ranges[0:266:int(round(len(laser_ranges)/7))]
+
         # print(self.segmented_laser_data)
 
 
@@ -107,10 +96,10 @@ class TurtlebotController(object):
         out = (((parameters[3] - parameters[2]) * (value - parameters[0])) /
             (parameters[1] - parameters[0])) + parameters[2]
 
-        if out > parameters[-1]:
-            out = parameters[-1]
-        elif out < -1*parameters[-1]:
-            out = -1*parameters[-1]
+        # if out > parameters[-1]:
+        #     out = parameters[-1]
+        # elif out < -1*parameters[-1]:
+        #     out = -1*parameters[-1]
 
         return out
 
@@ -128,43 +117,11 @@ class TurtlebotController(object):
 
 def main():
     try:
-        input_size = 8
-        hidden_size = 16
-        output_size = 2
-        instance = TurtlebotController(input_size, hidden_size, output_size)
+        instance = TurtlebotController()
         node_rate = instance.return_rate()
-        mlp_controller = instance.return_mlp()
-
-        nn_inputs = np.ones(input_size)
-
-        wi = np.random.randn(input_size, hidden_size)
-        wo = np.random.randn(hidden_size, output_size)
-
-        twist_msg = instance.create_zeroed_twist()
-
-        commands = mlp_controller.feedForward(nn_inputs)
-        # print(commands)
-        twist_msg.linear.x = commands[0]
-        twist_msg.angular.z = commands[1]
-
-        # hello = "yuo"
-        # start = input('Enter anything to start: ')
-        # print("all good fam", start)
 
         while rospy.is_shutdown() is not True:
-
-            # instance.test()
-            # instance.publish_vel(twist_msg)
-            # instance.extract_scan_params()
-            # angle_min, angle_max, angle_increment = instance.return_laser_scan_params()
-            # angle_min = int(angle_min*180/math.pi)
-            # angle_max = int(angle_max*180/math.pi)
-            # angle_increment = angle_increment*180/math.pi
-            # print("min: {}, max: {}, inc: {}".format(angle_min, angle_max, angle_increment))
-
-            # laser_msg = instance.return_segmented_laser_data()
-            # print("vals: {}".format(laser_msg))
-            # instance.drive(laser_msg)
+            # This node should stay alive and purely act as a controller
             node_rate.sleep()
 
     except KeyboardInterrupt:
