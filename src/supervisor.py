@@ -103,8 +103,8 @@ def main():
     supervisor = Supervisor()
     node_rate = supervisor.return_rate()
 
-    # supervisor.reset_world()
-    supervisor.update_time_step(0.1)
+    supervisor.reset_world()
+    supervisor.update_time_step(0.3)
     while rospy.is_shutdown() is not True:
         node_rate.sleep()
 
