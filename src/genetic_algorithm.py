@@ -13,14 +13,25 @@ class GeneticAlgorithm(object):
         super(GeneticAlgorithm, self).__init__()
         # dimensions are number of input/hidden/ouput nodes in an array
         self.network_dimensions = network_dimensions
-        self.mutate_rate = 0.05
+        self.default_network_dimensions = [7, 16, 2]
+        self.pop_size = 50
+        self.mutate_rate = 0.01
+        self.severity = 1.0
+        self.elitism = 1
+        self.k_parents = 3
 
 
-    def initialise_population(self, pop_size=50, net_dims=[7, 16, 2]):
+    def initialise_population(self, pop_size=default, net_dims=default):
         """A generation contains pop_size individuals, which contain two matrices:
             input to hidden and hidden to output.
 
             List -> List -> np array"""
+
+        if pop_size is default:
+            pop_size = self.pop_size
+
+        if net_dims is default:
+            net_dims = self.default_network_dimensions
 
         generation = [None] * pop_size
 
@@ -30,8 +41,14 @@ class GeneticAlgorithm(object):
 
         return generation
 
-    def mutate(self, individual, mutate_rate=0.01, severity=1.0):
+    def mutate(self, individual, mutate_rate=default, severity=default):
         """Vectorised, in-place mutation yay"""
+
+        if mutate_rate is default:
+            mutate_rate = self.mutate_rate
+
+        if severity is default:
+            severity = self.severity
 
         for layer in range(0, len(individual)):
             r = np.random.random(size=individual[layer].shape)
@@ -74,14 +91,21 @@ class GeneticAlgorithm(object):
     def create_new_generation(self,
                               current_generation,
                               fitness_gen,
-                              elitism=1,
-                              k=3,
+                              elitism=default,
+                              k=default,
                               new_gen_size=default):
 
         """Generation and fitness must be sorted before using this"""
 
+        if elitism is default:
+            elitism = self.elitism
+
+        if k is default:
+            k = self.k_parents
+
         if new_gen_size is default:
             new_gen_size = len(current_generation)
+
 
         new_gen = [None]*new_gen_size
 
