@@ -6,6 +6,9 @@ import time
 import turtlebot, mlp, genetic_algorithm
 import rospy
 import std_srvs.srv, gazebo_msgs.srv
+import rosgraph_msgs.msg
+
+default = object()
 
 class Supervisor(object):
     """Gazebo simulation supervisor for neuroevolution"""
@@ -17,7 +20,14 @@ class Supervisor(object):
 
         self.frequency = 10
         self.rate = rospy.Rate(self.frequency)
+        self.clock_sub = rospy.Subscriber('/clock', rosgraph_msgs.msg.Clock, self.sim_clock_cb)
+        self.sim_time = 0
 
+        self.default_time_step = 0.3
+        self.evaluation_time = 60*5
+
+        self.network_dimensions = [7, 16, 2]
+        rospy.loginfo("Supervisor: Supervisor initialised")
         # self.cmd_vel_pub_ = rospy.Publisher('/mobile_base/commands/velocity', geometry_msgs.msg.Twist, queue_size=1)
         #
         # self.laser_scan_sub_ = rospy.Subscriber('/laserscan', sensor_msgs.msg.LaserScan, self.scan_cb)
@@ -31,6 +41,9 @@ class Supervisor(object):
 
         rospy.logwarn("Supervisor: Shutting down simulation")
         os.system('kill %d' % os.getpid())
+
+    def sim_clock_cb(self, msg):
+        self.sim_time = msg
 
     def reset_world(self):
         rospy.logwarn("Supervisor: Waiting for reset service...")
@@ -99,14 +112,66 @@ class Supervisor(object):
     def return_rate(self):
         return self.rate
 
+    def return_network_dimensions(self,):
+        return self.network_dimensions
+
+    def return_default_time_step(self):
+        return self.default_time_step
+
+    def return_time(self, which=default):
+        if which is default:
+            return self.sim_time.secs
+
+        return self.sim_time.nsecs
+
+    def return_evaluation_time(self):
+        return self.evaluation_time
+
 def main():
     supervisor = Supervisor()
     node_rate = supervisor.return_rate()
+    network_dimensions = supervisor.return_network_dimensions()
+    time_step = supervisor.return_default_time_step()
+    evaluation_time = supervisor.return_evaluation_time()
 
-    supervisor.reset_world()
-    supervisor.update_time_step(0.3)
-    while rospy.is_shutdown() is not True:
-        node_rate.sleep()
+    turtlebot = TurtlebotController()
+    neural_network = MLP_NeuralNetwork(network_dimensions[0], network_dimensions[1], network_dimensions[2])
+    ga = GeneticAlgorithm(network_dimensions)
+
+    population = ga.initialise_population()
+    generation_count = 0
+    generation_fitness = np.zeros(len(population))
+
+    supervisor.update_time_step(time_step)
+
+    rospy.loginfo("Starting in...")
+    time.sleep(1)
+    for i in range(5, 0, -1):
+        rospy.loginfo("{}...".format(i))
+        time.sleep(1)
+    rospy.loginfo("Boom.")
+
+    while generation_count < ga.return_max_gen() and rospy.is_shutdown() is not True:
+        supervisor.reset_world()
+
+        for individual in range(0, len(population)):
+            end_condition = False
+
+            twist_msg = turtlebot.create_zeroed_twist()
+            neural_network.change_weights(population[individual][0], population[individual][1])
+
+            start_time = supervisor.return_time()
+            elapsed_time = start_time - supervisor.return_time()
+
+            while elapsed_time < evaluation_time and end_condition is False:
+                laser_data = turtlebot.return_segmented_laser_data()
+                action = neural_network.feed_forward(laser_data)
+                twist_msg.linear.x = action[0]
+                twist_msg.angular.z = action[1]
+                turtlebot.publish_vel(twist_msg)
+                elapsed_time = start_time - supervisor.return_time()
+                node_rate.sleep()
+
 
 if __name__ == "__main__":
     main()

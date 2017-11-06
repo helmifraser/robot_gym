@@ -26,7 +26,7 @@ class MLP_NeuralNetwork(object):
     def leaky_relu(self, data, epsilon=0.01):
         return np.maximum(data, epsilon * data)
 
-    def feedForward(self, network_inputs):
+    def feed_forward(self, network_inputs):
         # t = time.time()
         input_activations = np.zeros(self.input)
         input_activations[:-1] = network_inputs
@@ -70,7 +70,7 @@ def main():
     # my_mlp.save_weights_to_file("weights")
     my_mlp.load_weights(filename="weights")
     mlp_in = np.ones(7)
-    output = my_mlp.feedForward(mlp_in)
+    output = my_mlp.feed_forward(mlp_in)
     print(output)
 
 if __name__ == '__main__':

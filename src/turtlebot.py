@@ -13,7 +13,7 @@ default = object()
 
 
 class TurtlebotController(object):
-    """Reinforcement learning of a turtlebot using Gazebo and OpenAI Gym"""
+    """Controller for a Turtlebot"""
 
     def __init__(self):
         super(TurtlebotController, self).__init__()
@@ -105,9 +105,6 @@ class TurtlebotController(object):
 
     def return_rate(self):
         return self.rate
-
-    def return_mlp(self):
-        return self.controller
 
     def test(self):
         print("testing")

@@ -13,7 +13,7 @@ class GeneticAlgorithm(object):
         super(GeneticAlgorithm, self).__init__()
         # dimensions are number of input/hidden/ouput nodes in an array
         self.network_dimensions = network_dimensions
-        self.default_network_dimensions = [7, 16, 2]
+        self.max_gen = 50
         self.pop_size = 50
         self.mutate_rate = 0.01
         self.severity = 1.0
@@ -31,7 +31,7 @@ class GeneticAlgorithm(object):
             pop_size = self.pop_size
 
         if net_dims is default:
-            net_dims = self.default_network_dimensions
+            net_dims = self.network_dimensions
 
         generation = [None] * pop_size
 
@@ -139,10 +139,11 @@ class GeneticAlgorithm(object):
         # print("indices: {}".format(indices))
         return sorted_gen, fitness_vals
 
-
     def return_network_dimensions(self):
         return self.network_dimensions[0], self.network_dimensions[1], self.network_dimensions[2]
 
+    def return_max_gen(self):
+        return self.max_gen
 
 def main():
     dim = [7, 16, 2]
