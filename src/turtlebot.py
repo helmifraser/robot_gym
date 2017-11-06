@@ -35,7 +35,7 @@ class TurtlebotController(object):
         self.scan_range_max = 0
 
         self.cmd_msg = self.create_zeroed_twist()
-        self.segmented_laser_data = [0, 0, 0, 0, 0, 0, 0]
+        self.segmented_laser_data = np.zeros(7)
         self.scale_params = [0.10, 10, -1, 1]
         rospy.loginfo("Turtlebot: Completed init")
 

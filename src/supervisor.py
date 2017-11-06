@@ -109,6 +109,14 @@ class Supervisor(object):
         # print("convert: \n {},\n {},\n {},\n {}".format(properties.time_step, properties.max_update_rate, properties.gravity, properties.ode_config))
         return properties
 
+    def save_top_individuals(self, generation, best=5, filename="best-"):
+        for i in range(0, best):
+            filename_wi = filename + str(i) + "-wi"
+            filename_wo = filename + str(i) + "-wo"
+
+            np.save(filename_wi, generation[i][0])
+            np.save(filename_wo, generation[i][1])
+
     def return_rate(self):
         return self.rate
 
@@ -128,50 +136,99 @@ class Supervisor(object):
         return self.evaluation_time
 
 def main():
+    # Instantiate supervisor
     supervisor = Supervisor()
     node_rate = supervisor.return_rate()
     network_dimensions = supervisor.return_network_dimensions()
     time_step = supervisor.return_default_time_step()
     evaluation_time = supervisor.return_evaluation_time()
 
+    # Instantiate controller, NN and GA for given dimensions
     turtlebot = TurtlebotController()
     neural_network = MLP_NeuralNetwork(network_dimensions[0], network_dimensions[1], network_dimensions[2])
     ga = GeneticAlgorithm(network_dimensions)
 
-    population = ga.initialise_population()
+    # Generate initial population and required params
+    initial_generation = ga.initialise_population()
+    next_generation = None
     generation_count = 0
-    generation_fitness = np.zeros(len(population))
+    generation_fitness = np.zeros(len(initial_generation))
 
+    # Set sim time step to go faster
     supervisor.update_time_step(time_step)
 
+    # Countdown timer
     rospy.loginfo("Starting in...")
     time.sleep(1)
     for i in range(5, 0, -1):
         rospy.loginfo("{}...".format(i))
         time.sleep(1)
-    rospy.loginfo("Boom.")
+    rospy.loginfo("Punch it.")
 
+    # Go until max no. of generations have been reached or ROS fails
     while generation_count < ga.return_max_gen() and rospy.is_shutdown() is not True:
+        # Set initial pop or overwrite with new gen from last iteration
+        if generation_count == 0:
+            population = initial_generation
+        else:
+            population = next_generation
+
+        # Reset world state
         supervisor.reset_world()
 
+        # For each individual in the generation
         for individual in range(0, len(population)):
+            # End condition for critical failures i.e wall bumping. Unused atm.
             end_condition = False
 
+            # Create empty velocity message
             twist_msg = turtlebot.create_zeroed_twist()
+
+            # Set network weights to current inidividual
             neural_network.change_weights(population[individual][0], population[individual][1])
 
+            # Begin counting run time, should run for 5 minutes
             start_time = supervisor.return_time()
             elapsed_time = start_time - supervisor.return_time()
 
+            # Run for 5 minutes or until critical failure
             while elapsed_time < evaluation_time and end_condition is False:
+                # Get current laser data
                 laser_data = turtlebot.return_segmented_laser_data()
+
+                # Feed forward through network and get next actions
                 action = neural_network.feed_forward(laser_data)
+
+                # Send actions to 'bot
                 twist_msg.linear.x = action[0]
                 twist_msg.angular.z = action[1]
                 turtlebot.publish_vel(twist_msg)
-                elapsed_time = start_time - supervisor.return_time()
-                node_rate.sleep()
 
+                # Update the fitness of this action
+                ga.fit_update(generation_fitness, individual, laser_data)
+
+                node_rate.sleep()
+                elapsed_time = start_time - supervisor.return_time()
+
+            # This individual is done, now reset for the next one
+            supervisor.reset_world()
+
+        # Sort the population and fitness structures in descending order i.e best
+        # fitness first
+        population, generation_fitness = ga.sort_by_fitness(population, generation_fitness)
+
+        # Create the next generation by applying selection, crossover etc
+        next_generation = ga.create_new_generation(population, generation_fitness)
+
+        # Introduce some random mutations
+        ga.mutate(next_generation)
+
+        # Reset fitness array
+        generation_fitness.fill(0)
+        generation_count += 1
+
+    # Save best individuals, defaults to top 5 unless overridden
+    supervisor.save_top_individuals(next_generation)
 
 if __name__ == "__main__":
     main()

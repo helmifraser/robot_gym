@@ -20,6 +20,9 @@ class GeneticAlgorithm(object):
         self.elitism = 1
         self.k_parents = 3
 
+        self.laser_violation_range = 0.3
+        self.front_punish = -2
+        self.side_punish = -1
 
     def initialise_population(self, pop_size=default, net_dims=default):
         """A generation contains pop_size individuals, which contain two matrices:
@@ -121,6 +124,25 @@ class GeneticAlgorithm(object):
 
         return new_gen
 
+    def fit_update(fit_val, index, laser_data, laser_front_thresh=default, laser_side_thresh=default):
+        """Updates a numpy array of fitness values depending on number of
+            laser range violations"""
+
+        if laser_thresh is default:
+            laser_thresh = self.laser_violation_range
+
+        front_violations = np.size(np.where(laser_data[2:5] < laser_front_thresh))
+        right_side_violations = np.size(np.where(laser_data[0:2] < laser_side_thresh))
+        left_side_violations = np.size(np.where(laser_data[5:7] < laser_side_thresh))
+
+        # print("violations: front {}, right {}, left {}".format(front_violations,
+        #         right_side_violations, left_side_violations))
+
+        fit_val[index] += (-self.front_punish * front_violations -
+                            self.side_punish * (left_side_violations
+                            + right_side_violations))
+
+
     def sort_by_fitness(self, generation, fitness_vals):
         if len(fitness_vals) is not len(generation):
             print("sort_by_fitness: Error, number of fitnesses and individuals do not match")
@@ -148,17 +170,19 @@ class GeneticAlgorithm(object):
 def main():
     dim = [7, 16, 2]
     ga = GeneticAlgorithm(dim)
-    generation_zero = ga.initialise_population()
-    # fitness_vals = np.random.randint(100, size=len(generation_zero))
-    fitness_vals = np.random.random(size=[len(generation_zero)])
-    generation_zero, fitness_vals = ga.sort_by_fitness(generation_zero, fitness_vals)
-
-    # winner = ga.tournament_selection(generation=generation_zero, fitness_gen=fitness_vals)
+    generation = ga.initialise_population()
+    next_gen = None
+    # fitness_vals = np.random.randint(100, size=len(generation))
+    fitness_vals = np.random.randint(-100, high=0, size=(len(generation)))
+    generation, fitness_vals = ga.sort_by_fitness(generation, fitness_vals)
+    print(generation[3][1])
+    # winner = ga.tournament_selection(generation=generation, fitness_gen=fitness_vals)
     # print(winner)
-    generation_one = ga.create_new_generation(current_generation=generation_zero, fitness_gen=fitness_vals)
-
+    next_gen = ga.create_new_generation(current_generation=generation, fitness_gen=fitness_vals)
+    generation = next_gen
+    print(generation[3][1])
     # t = time.time()
-    # new_guy = ga.crossover(generation_zero[0], generation_zero[1])
+    # new_guy = ga.crossover(generation[0], generation[1])
     # elapsed = time.time() - t
     # print("time: {}".format(elapsed))
 
