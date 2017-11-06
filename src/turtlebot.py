@@ -18,7 +18,7 @@ class TurtlebotController(object):
     def __init__(self):
         super(TurtlebotController, self).__init__()
         rospy.on_shutdown(self.shutdown_hook)
-        rospy.init_node('turtlebot_controller')
+        # rospy.init_node('turtlebot_controller')
 
         self.frequency = 10
         self.rate = rospy.Rate(self.frequency)

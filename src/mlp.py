@@ -28,10 +28,16 @@ class MLP_NeuralNetwork(object):
 
     def feed_forward(self, network_inputs):
         # t = time.time()
+        # print(np.shape(network_inputs))
         input_activations = np.zeros(self.input)
         input_activations[:-1] = network_inputs
         input_activations = self.leaky_relu(input_activations)
         input_activations[-1] = 1
+        # np.reshape(input_activations, (1, 8))
+        # print(np.shape(input_activations))
+        # print(np.shape(self.wi))
+
+        # print(np.reshape(input_activations, (8, 1)))
         hidden_activations = self.leaky_relu(np.dot(input_activations, self.wi))
         output_activations = np.dot(hidden_activations, self.wo)
         # self.time_vector = time.time() - t
@@ -66,9 +72,9 @@ class MLP_NeuralNetwork(object):
 def main():
 
     my_mlp = MLP_NeuralNetwork(input=7, hidden=16, output=2)
-    # my_mlp.change_weights(input_to_hidden=np.random.randn(my_mlp.input, my_mlp.hidden), hidden_to_output=np.random.randn(my_mlp.hidden, my_mlp.output))
+    my_mlp.change_weights(input_to_hidden=np.random.randn(my_mlp.input, my_mlp.hidden), hidden_to_output=np.random.randn(my_mlp.hidden, my_mlp.output))
     # my_mlp.save_weights_to_file("weights")
-    my_mlp.load_weights(filename="weights")
+    # my_mlp.load_weights(filename="weights")
     mlp_in = np.ones(7)
     output = my_mlp.feed_forward(mlp_in)
     print(output)

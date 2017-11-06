@@ -20,7 +20,8 @@ class GeneticAlgorithm(object):
         self.elitism = 1
         self.k_parents = 3
 
-        self.laser_violation_range = 0.3
+        self.laser_front_violation_range = 0.5
+        self.laser_side_violation_range = 0.2
         self.front_punish = -2
         self.side_punish = -1
 
@@ -39,7 +40,7 @@ class GeneticAlgorithm(object):
         generation = [None] * pop_size
 
         for individual in range(0, pop_size, 1):
-            generation[individual] = [np.random.randn(net_dims[0], net_dims[1]),
+            generation[individual] = [np.random.randn(net_dims[0] + 1, net_dims[1]),
                                       np.random.randn(net_dims[1], net_dims[2])]
 
         return generation
@@ -124,12 +125,15 @@ class GeneticAlgorithm(object):
 
         return new_gen
 
-    def fit_update(fit_val, index, laser_data, laser_front_thresh=default, laser_side_thresh=default):
+    def fit_update(self, fit_val, index, laser_data, laser_front_thresh=default, laser_side_thresh=default):
         """Updates a numpy array of fitness values depending on number of
             laser range violations"""
 
-        if laser_thresh is default:
-            laser_thresh = self.laser_violation_range
+        if laser_front_thresh is default:
+            laser_front_thresh = self.laser_front_violation_range
+
+        if laser_side_thresh is default:
+            laser_side_thresh = self.laser_side_violation_range
 
         front_violations = np.size(np.where(laser_data[2:5] < laser_front_thresh))
         right_side_violations = np.size(np.where(laser_data[0:2] < laser_side_thresh))

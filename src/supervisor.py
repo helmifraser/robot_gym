@@ -23,8 +23,9 @@ class Supervisor(object):
         self.clock_sub = rospy.Subscriber('/clock', rosgraph_msgs.msg.Clock, self.sim_clock_cb)
         self.sim_time = 0
 
-        self.default_time_step = 0.3
+        self.default_time_step = 0.25
         self.evaluation_time = 60*5
+        self.end_condition = False
 
         self.network_dimensions = [7, 16, 2]
         rospy.loginfo("Supervisor: Supervisor initialised")
@@ -41,6 +42,10 @@ class Supervisor(object):
 
         rospy.logwarn("Supervisor: Shutting down simulation")
         os.system('kill %d' % os.getpid())
+
+    def reset_timer(self, event):
+        rospy.loginfo("Timer called at {}".format(0.000000001*int(str(event.current_real))))
+        self.end_condition = True
 
     def sim_clock_cb(self, msg):
         self.sim_time = msg
@@ -126,14 +131,25 @@ class Supervisor(object):
     def return_default_time_step(self):
         return self.default_time_step
 
-    def return_time(self, which=default):
-        if which is default:
-            return self.sim_time.secs
+    def check_end_condition(self):
+        return self.end_condition
 
-        return self.sim_time.nsecs
+    def reset_end_condition(self):
+        self.end_condition = False
 
     def return_evaluation_time(self):
         return self.evaluation_time
+
+# def main():
+#     supervisor = Supervisor()
+#     node_rate = supervisor.return_rate()
+#     time_step = supervisor.return_default_time_step()    # Set sim time step to go faster
+#     supervisor.update_time_step(time_step)
+#     rospy.Timer(rospy.Duration(supervisor.return_evaluation_time()), supervisor.reset_timer)
+#     while supervisor.check_end_condition() is False:
+#         node_rate.sleep()
+#
+#     print("congrats fam")
 
 def main():
     # Instantiate supervisor
@@ -144,9 +160,9 @@ def main():
     evaluation_time = supervisor.return_evaluation_time()
 
     # Instantiate controller, NN and GA for given dimensions
-    turtlebot = TurtlebotController()
-    neural_network = MLP_NeuralNetwork(network_dimensions[0], network_dimensions[1], network_dimensions[2])
-    ga = GeneticAlgorithm(network_dimensions)
+    robot = turtlebot.TurtlebotController()
+    neural_network = mlp.MLP_NeuralNetwork(network_dimensions[0], network_dimensions[1], network_dimensions[2])
+    ga = genetic_algorithm.GeneticAlgorithm(network_dimensions)
 
     # Generate initial population and required params
     initial_generation = ga.initialise_population()
@@ -158,12 +174,15 @@ def main():
     supervisor.update_time_step(time_step)
 
     # Countdown timer
-    rospy.loginfo("Starting in...")
-    time.sleep(1)
-    for i in range(5, 0, -1):
-        rospy.loginfo("{}...".format(i))
-        time.sleep(1)
-    rospy.loginfo("Punch it.")
+    # rospy.loginfo("Starting in...")
+    # time.sleep(1)
+    # for i in range(3, 0, -1):
+    #     rospy.loginfo("{}...".format(i))
+    #     time.sleep(1)
+    # rospy.loginfo("Punch it.")
+
+    # Set ROS timer to ping every x minutes
+    rospy.Timer(rospy.Duration(supervisor.return_evaluation_time()), supervisor.reset_timer)
 
     # Go until max no. of generations have been reached or ROS fails
     while generation_count < ga.return_max_gen() and rospy.is_shutdown() is not True:
@@ -174,27 +193,23 @@ def main():
             population = next_generation
 
         # Reset world state
-        supervisor.reset_world()
+        # supervisor.reset_world()
 
         # For each individual in the generation
         for individual in range(0, len(population)):
-            # End condition for critical failures i.e wall bumping. Unused atm.
-            end_condition = False
 
             # Create empty velocity message
-            twist_msg = turtlebot.create_zeroed_twist()
+            twist_msg = robot.create_zeroed_twist()
 
             # Set network weights to current inidividual
             neural_network.change_weights(population[individual][0], population[individual][1])
 
-            # Begin counting run time, should run for 5 minutes
-            start_time = supervisor.return_time()
-            elapsed_time = start_time - supervisor.return_time()
-
+            rospy.loginfo("Running gen {} individual {}".format(generation_count, individual))
+            
             # Run for 5 minutes or until critical failure
-            while elapsed_time < evaluation_time and end_condition is False:
+            while supervisor.check_end_condition() is False:
                 # Get current laser data
-                laser_data = turtlebot.return_segmented_laser_data()
+                laser_data = robot.return_segmented_laser_data()
 
                 # Feed forward through network and get next actions
                 action = neural_network.feed_forward(laser_data)
@@ -202,14 +217,16 @@ def main():
                 # Send actions to 'bot
                 twist_msg.linear.x = action[0]
                 twist_msg.angular.z = action[1]
-                turtlebot.publish_vel(twist_msg)
+                robot.publish_vel(twist_msg)
 
                 # Update the fitness of this action
                 ga.fit_update(generation_fitness, individual, laser_data)
 
                 node_rate.sleep()
-                elapsed_time = start_time - supervisor.return_time()
 
+            # rospy.loginfo("")
+            # time.sleep(20)
+            supervisor.reset_end_condition()
             # This individual is done, now reset for the next one
             supervisor.reset_world()
 
@@ -221,7 +238,8 @@ def main():
         next_generation = ga.create_new_generation(population, generation_fitness)
 
         # Introduce some random mutations
-        ga.mutate(next_generation)
+        for individual in next_generation:
+            ga.mutate(individual)
 
         # Reset fitness array
         generation_fitness.fill(0)
