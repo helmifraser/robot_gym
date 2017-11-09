@@ -39,7 +39,8 @@ class MLP_NeuralNetwork(object):
 
         # print(np.reshape(input_activations, (8, 1)))
         hidden_activations = self.leaky_relu(np.dot(input_activations, self.wi))
-        output_activations = np.dot(hidden_activations, self.wo)
+        output_activations = np.tanh(np.dot(hidden_activations, self.wo))
+        output_activations = np.nan_to_num(output_activations)
         # self.time_vector = time.time() - t
         # print("vector time: {}".format(self.time_vector))
         return output_activations

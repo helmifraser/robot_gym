@@ -5,7 +5,7 @@ import time
 
 import turtlebot, mlp, genetic_algorithm
 import rospy
-import std_srvs.srv, gazebo_msgs.srv
+import std_srvs.srv, gazebo_msgs.srv, gazebo_msgs.msg
 import rosgraph_msgs.msg
 
 default = object()
@@ -23,7 +23,7 @@ class Supervisor(object):
         self.clock_sub = rospy.Subscriber('/clock', rosgraph_msgs.msg.Clock, self.sim_clock_cb)
         self.sim_time = 0
 
-        self.default_time_step = 0.25
+        self.default_time_step = 0.3
         self.evaluation_time = 60*5
         self.end_condition = False
 
@@ -59,6 +59,21 @@ class Supervisor(object):
             rospy.loginfo("Supervisor: Resetting world")
         except rospy.ServiceException, e:
             rospy.loginfo("Supervisor: Service call (reset_world) failed: %s"%e)
+
+    # def reset_world(self):
+    #     rospy.logwarn("Supervisor: Waiting for reset service...")
+    #     rospy.wait_for_service("/gazebo/set_model_state")
+    #     try:
+    #         reset = rospy.ServiceProxy("/gazebo/set_model_state", gazebo_msgs.srv.SetModelState)
+    #         setmodelstate = gazebo_msgs.srv.SetModelState()
+    #         modelstate = gazebo_msgs.msg.ModelState()
+    #         modelstate.model_name = "mobile_base"
+    #         print(modelstate)
+    #         # setmodelstate.request.model_state = modelstate
+    #         reset(modelstate)
+    #         rospy.loginfo("Supervisor: Resetting world")
+    #     except rospy.ServiceException, e:
+    #         rospy.loginfo("Supervisor: Service call (reset_world) failed: %s"%e)
 
     def pause_sim_physics(self):
         rospy.logwarn("Supervisor: Waiting for pause physics service...")
@@ -174,15 +189,13 @@ def main():
     supervisor.update_time_step(time_step)
 
     # Countdown timer
-    # rospy.loginfo("Starting in...")
-    # time.sleep(1)
-    # for i in range(3, 0, -1):
-    #     rospy.loginfo("{}...".format(i))
-    #     time.sleep(1)
-    # rospy.loginfo("Punch it.")
+    rospy.loginfo("Starting in...")
+    time.sleep(1)
+    for i in range(5, 0, -1):
+        rospy.loginfo("{}...".format(i))
+        time.sleep(1)
+    rospy.loginfo("Punch it.")
 
-    # Set ROS timer to ping every x minutes
-    rospy.Timer(rospy.Duration(supervisor.return_evaluation_time()), supervisor.reset_timer)
 
     # Go until max no. of generations have been reached or ROS fails
     while generation_count < ga.return_max_gen() and rospy.is_shutdown() is not True:
@@ -205,7 +218,10 @@ def main():
             neural_network.change_weights(population[individual][0], population[individual][1])
 
             rospy.loginfo("Running gen {} individual {}".format(generation_count, individual))
-            
+
+            # Set ROS timer to ping every x minutes
+            rospy.Timer(rospy.Duration(supervisor.return_evaluation_time()), supervisor.reset_timer, oneshot=True)
+
             # Run for 5 minutes or until critical failure
             while supervisor.check_end_condition() is False:
                 # Get current laser data
@@ -213,6 +229,7 @@ def main():
 
                 # Feed forward through network and get next actions
                 action = neural_network.feed_forward(laser_data)
+                # rospy.loginfo("laser_data: {}\n action: {}".format(laser_data, action))
 
                 # Send actions to 'bot
                 twist_msg.linear.x = action[0]
@@ -222,10 +239,8 @@ def main():
                 # Update the fitness of this action
                 ga.fit_update(generation_fitness, individual, laser_data)
 
-                node_rate.sleep()
+                # node_rate.sleep()
 
-            # rospy.loginfo("")
-            # time.sleep(20)
             supervisor.reset_end_condition()
             # This individual is done, now reset for the next one
             supervisor.reset_world()
@@ -247,6 +262,7 @@ def main():
 
     # Save best individuals, defaults to top 5 unless overridden
     supervisor.save_top_individuals(next_generation)
+    rospy.loginfo("Evolution complete, top individuals saved")
 
 if __name__ == "__main__":
     main()

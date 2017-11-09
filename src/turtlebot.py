@@ -65,6 +65,7 @@ class TurtlebotController(object):
         laser_ranges = np.asarray(msg.ranges)
         laser_ranges = np.nan_to_num(laser_ranges)
         laser_ranges = np.where(laser_ranges == 0, msg.range_max + 10, laser_ranges)
+        laser_ranges = np.where(laser_ranges > 30, msg.range_max + 10, laser_ranges)
         self.segmented_laser_data = laser_ranges[0:266:int(round(len(laser_ranges)/7))]
 
         # print(self.segmented_laser_data)
