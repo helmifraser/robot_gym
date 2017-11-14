@@ -6,7 +6,7 @@ import time
 import turtlebot, mlp, genetic_algorithm
 import rospy
 import std_srvs.srv, gazebo_msgs.srv, gazebo_msgs.msg
-import rosgraph_msgs.msg
+import rosgraph_msgs.msg, std_msgs.msg
 
 default = object()
 
@@ -20,10 +20,11 @@ class Supervisor(object):
 
         self.frequency = 10
         self.rate = rospy.Rate(self.frequency)
+        self.tracker = rospy.Publisher('/neuroevolution/progress', std_msgs.msg.String, queue_size=1)
         self.clock_sub = rospy.Subscriber('/clock', rosgraph_msgs.msg.Clock, self.sim_clock_cb)
         self.sim_time = 0
 
-        self.default_time_step = 0.3
+        self.default_time_step = 0.01
         self.evaluation_time = 60*5
         self.end_condition = False
 
@@ -44,19 +45,19 @@ class Supervisor(object):
         os.system('kill %d' % os.getpid())
 
     def reset_timer(self, event):
-        rospy.loginfo("Timer called at {}".format(0.000000001*int(str(event.current_real))))
+        # rospy.loginfo("Timer called at {}".format(0.000000001*int(str(event.current_real))))
         self.end_condition = True
 
     def sim_clock_cb(self, msg):
         self.sim_time = msg
 
     def reset_world(self):
-        rospy.logwarn("Supervisor: Waiting for reset service...")
+        # rospy.logwarn("Supervisor: Waiting for reset service...")
         rospy.wait_for_service("/gazebo/reset_world")
         try:
             reset = rospy.ServiceProxy("/gazebo/reset_world", std_srvs.srv.Empty())
             reset()
-            rospy.loginfo("Supervisor: Resetting world")
+            # rospy.loginfo("Supervisor: Resetting world")
         except rospy.ServiceException, e:
             rospy.loginfo("Supervisor: Service call (reset_world) failed: %s"%e)
 
@@ -155,16 +156,40 @@ class Supervisor(object):
     def return_evaluation_time(self):
         return self.evaluation_time
 
-# def main():
-#     supervisor = Supervisor()
-#     node_rate = supervisor.return_rate()
-#     time_step = supervisor.return_default_time_step()    # Set sim time step to go faster
-#     supervisor.update_time_step(time_step)
-#     rospy.Timer(rospy.Duration(supervisor.return_evaluation_time()), supervisor.reset_timer)
-#     while supervisor.check_end_condition() is False:
-#         node_rate.sleep()
-#
-#     print("congrats fam")
+    def update_progress(self, progress):
+        msg = "Running gen {} individual {}".format(progress[0], progress[1])
+        self.tracker.publish(msg)
+
+def test():
+    supervisor = Supervisor()
+    node_rate = supervisor.return_rate()
+    network_dimensions = supervisor.return_network_dimensions()
+    time_step = supervisor.return_default_time_step()
+
+    controller = "best-1"
+
+    # Instantiate controller, NN and GA for given dimensions
+    robot = turtlebot.TurtlebotController()
+    neural_network = mlp.MLP_NeuralNetwork(network_dimensions[0], network_dimensions[1], network_dimensions[2])
+    neural_network.load_weights(controller)
+
+    twist_msg = robot.create_zeroed_twist()
+
+    rospy.loginfo("Supervisor: Using controller {}".format(controller))
+
+    while rospy.is_shutdown() is False:
+        # Get current laser data
+        laser_data = robot.return_segmented_laser_data()
+
+        # Feed forward through network and get next actions
+        action = neural_network.feed_forward(laser_data)
+        # rospy.loginfo("laser_data: {}\n action: {}".format(laser_data, action))
+
+        # Send actions to 'bot
+        twist_msg.linear.x = action[0]
+        twist_msg.angular.z = action[1]
+        robot.publish_vel(twist_msg)
+        node_rate.sleep()
 
 def main():
     # Instantiate supervisor
@@ -206,7 +231,7 @@ def main():
             population = next_generation
 
         # Reset world state
-        # supervisor.reset_world()
+        supervisor.reset_world()
 
         # For each individual in the generation
         for individual in range(0, len(population)):
@@ -217,7 +242,9 @@ def main():
             # Set network weights to current inidividual
             neural_network.change_weights(population[individual][0], population[individual][1])
 
-            rospy.loginfo("Running gen {} individual {}".format(generation_count, individual))
+            # rospy.loginfo("Running gen {} individual {}".format(generation_count, individual))
+            # print("Running gen {} individual {}".format(generation_count, individual))
+            supervisor.update_progress(progress=[generation_count, individual])
 
             # Set ROS timer to ping every x minutes
             rospy.Timer(rospy.Duration(supervisor.return_evaluation_time()), supervisor.reset_timer, oneshot=True)
@@ -229,15 +256,17 @@ def main():
 
                 # Feed forward through network and get next actions
                 action = neural_network.feed_forward(laser_data)
-                # rospy.loginfo("laser_data: {}\n action: {}".format(laser_data, action))
 
                 # Send actions to 'bot
                 twist_msg.linear.x = action[0]
                 twist_msg.angular.z = action[1]
                 robot.publish_vel(twist_msg)
 
+                bumper = robot.return_bumper_state()
+
                 # Update the fitness of this action
-                ga.fit_update(generation_fitness, individual, laser_data)
+                ga.fit_update(generation_fitness, individual, laser_data, action, bumper)
+                # rospy.loginfo("Current fit: {}".format(generation_fitness[individual]))
 
                 # node_rate.sleep()
 
@@ -248,6 +277,8 @@ def main():
         # Sort the population and fitness structures in descending order i.e best
         # fitness first
         population, generation_fitness = ga.sort_by_fitness(population, generation_fitness)
+        print(generation_fitness)
+        rospy.loginfo("Best fit: {}".format(generation_fitness[0]))
 
         # Create the next generation by applying selection, crossover etc
         next_generation = ga.create_new_generation(population, generation_fitness)
@@ -266,3 +297,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # test()

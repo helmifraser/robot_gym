@@ -6,7 +6,7 @@ import sys
 import os
 
 import rospy
-import std_msgs.msg, geometry_msgs.msg, sensor_msgs.msg
+import std_msgs.msg, geometry_msgs.msg, sensor_msgs.msg, kobuki_msgs.msg
 from rospy.numpy_msg import numpy_msg
 
 default = object()
@@ -26,6 +26,7 @@ class TurtlebotController(object):
         self.cmd_vel_pub_ = rospy.Publisher('/mobile_base/commands/velocity', geometry_msgs.msg.Twist, queue_size=1)
 
         self.laser_scan_sub_ = rospy.Subscriber('/laserscan', sensor_msgs.msg.LaserScan, self.scan_cb)
+        self.bumper_sub_ = rospy.Subscriber('/mobile_base/events/bumper', kobuki_msgs.msg.BumperEvent, self.bumper_cb)
 
         self.laser_msg = sensor_msgs.msg.LaserScan()
         self.scan_angle_min = 0
@@ -33,6 +34,8 @@ class TurtlebotController(object):
         self.scan_angle_increment = 0
         self.scan_range_min = 0
         self.scan_range_max = 0
+
+        self.bumper_state = 0
 
         self.cmd_msg = self.create_zeroed_twist()
         self.segmented_laser_data = np.zeros(7)
@@ -47,7 +50,7 @@ class TurtlebotController(object):
 
         rospy.logwarn("Turtlebot: Shutting down all the things fam")
         # sys.exit()
-        os.system('kill %d' % os.getpid())
+        # os.system('kill %d' % os.getpid())
 
     def create_zeroed_twist(self):
         msg = geometry_msgs.msg.Twist()
@@ -66,10 +69,12 @@ class TurtlebotController(object):
         laser_ranges = np.nan_to_num(laser_ranges)
         laser_ranges = np.where(laser_ranges == 0, msg.range_max + 10, laser_ranges)
         laser_ranges = np.where(laser_ranges > 30, msg.range_max + 10, laser_ranges)
-        self.segmented_laser_data = laser_ranges[0:266:int(round(len(laser_ranges)/7))]
-
+        # self.segmented_laser_data = laser_ranges[0:266:int(round(len(laser_ranges)/7))]
+        self.segmented_laser_data = laser_ranges
         # print(self.segmented_laser_data)
 
+    def bumper_cb(self, msg):
+        self.bumper_state = msg.state
 
     def extract_scan_params(self):
         self.scan_angle_min = self.laser_msg.angle_min
@@ -106,6 +111,9 @@ class TurtlebotController(object):
 
     def return_rate(self):
         return self.rate
+
+    def return_bumper_state(self):
+        return self.bumper_state
 
     def test(self):
         print("testing")

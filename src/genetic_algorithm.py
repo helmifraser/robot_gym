@@ -13,9 +13,9 @@ class GeneticAlgorithm(object):
         super(GeneticAlgorithm, self).__init__()
         # dimensions are number of input/hidden/ouput nodes in an array
         self.network_dimensions = network_dimensions
-        self.max_gen = 50
-        self.pop_size = 50
-        self.mutate_rate = 0.01
+        self.max_gen = 10
+        self.pop_size = 20
+        self.mutate_rate = 0.30
         self.severity = 1.0
         self.elitism = 1
         self.k_parents = 3
@@ -24,6 +24,9 @@ class GeneticAlgorithm(object):
         self.laser_side_violation_range = 0.2
         self.front_punish = -2
         self.side_punish = -1
+        self.backwards_punish = -3
+        self.bumper_punish = -10
+        self.spin_punish = -3
 
     def initialise_population(self, pop_size=default, net_dims=default):
         """A generation contains pop_size individuals, which contain two matrices:
@@ -112,7 +115,7 @@ class GeneticAlgorithm(object):
 
 
         new_gen = [None]*new_gen_size
-
+        # print(current_generation[0][1])
         for elites in range(0, elitism, 1):
             new_gen[elites] = copy.deepcopy(current_generation[elites])
 
@@ -123,9 +126,10 @@ class GeneticAlgorithm(object):
             # new_gen[offspring] = [item for item in child]
             new_gen[offspring] = copy.deepcopy(child)
 
+        # print(new_gen[0][1])
         return new_gen
 
-    def fit_update(self, fit_val, index, laser_data, laser_front_thresh=default, laser_side_thresh=default):
+    def fit_update(self, fit_val, index, laser_data, action, bumper_state, laser_front_thresh=default, laser_side_thresh=default):
         """Updates a numpy array of fitness values depending on number of
             laser range violations"""
 
@@ -139,12 +143,17 @@ class GeneticAlgorithm(object):
         right_side_violations = np.size(np.where(laser_data[0:2] < laser_side_thresh))
         left_side_violations = np.size(np.where(laser_data[5:7] < laser_side_thresh))
 
+        back_movement_violation = np.size(np.where(action[0] < 0))
+        angular_vel_violation = np.size(np.where(abs(action[1]) > 0.2))
         # print("violations: front {}, right {}, left {}".format(front_violations,
         #         right_side_violations, left_side_violations))
 
-        fit_val[index] += (-self.front_punish * front_violations -
+        fit_val[index] += (self.front_punish * front_violations +
                             self.side_punish * (left_side_violations
-                            + right_side_violations))
+                            + right_side_violations)
+                            + self.backwards_punish * back_movement_violation
+                            + self.bumper_punish * bumper_state
+                            + self.spin_punish * angular_vel_violation)
 
 
     def sort_by_fitness(self, generation, fitness_vals):
