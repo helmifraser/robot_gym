@@ -38,7 +38,7 @@ class TurtlebotController(object):
         self.bumper_state = 0
 
         self.cmd_msg = self.create_zeroed_twist()
-        self.segmented_laser_data = np.zeros(7)
+        self.segmented_laser_data = np.zeros(13)
         self.scale_params = [0.10, 10, -1, 1]
         rospy.loginfo("Turtlebot: Completed init")
 
@@ -70,7 +70,7 @@ class TurtlebotController(object):
         laser_ranges = np.where(laser_ranges == 0, msg.range_max + 10, laser_ranges)
         laser_ranges = np.where(laser_ranges > 30, msg.range_max + 10, laser_ranges)
         # self.segmented_laser_data = laser_ranges[0:266:int(round(len(laser_ranges)/7))]
-        self.segmented_laser_data = laser_ranges
+        self.segmented_laser_data = np.round(laser_ranges, decimals=2)
         # print(self.segmented_laser_data)
 
     def bumper_cb(self, msg):

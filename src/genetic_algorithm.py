@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import random
 import time
 import copy
@@ -13,20 +14,24 @@ class GeneticAlgorithm(object):
         super(GeneticAlgorithm, self).__init__()
         # dimensions are number of input/hidden/ouput nodes in an array
         self.network_dimensions = network_dimensions
-        self.max_gen = 10
-        self.pop_size = 20
-        self.mutate_rate = 0.30
-        self.severity = 1.0
-        self.elitism = 1
-        self.k_parents = 3
+        self.max_gen = 200
+        self.pop_size = 200
+        self.mutate_rate = 0.10
+        self.severity = 0.5
+        self.elitism = int(math.ceil(self.pop_size/100))
+        self.k_parents = self.pop_size/10
 
         self.laser_front_violation_range = 0.5
         self.laser_side_violation_range = 0.2
         self.front_punish = -2
         self.side_punish = -1
-        self.backwards_punish = -3
+        self.backwards_punish = -10
         self.bumper_punish = -10
-        self.spin_punish = -3
+        self.spin_punish = -10
+        self.reward_1 = 1
+        self.reward_2 = 2
+        self.reward_3 = 3
+        self.reward_4 = 4
 
     def initialise_population(self, pop_size=default, net_dims=default):
         """A generation contains pop_size individuals, which contain two matrices:
@@ -44,7 +49,8 @@ class GeneticAlgorithm(object):
 
         for individual in range(0, pop_size, 1):
             generation[individual] = [np.random.randn(net_dims[0] + 1, net_dims[1]),
-                                      np.random.randn(net_dims[1], net_dims[2])]
+                                      np.random.randn(net_dims[1], net_dims[2]),
+                                      np.random.randn(net_dims[2], net_dims[3])]
 
         return generation
 
@@ -65,6 +71,7 @@ class GeneticAlgorithm(object):
             # print("Mutate rate: {} Non zero: {} Where: {} Total weights: {}".format(mutate_rate, np.count_nonzero(m), np.where(m), individual[layer][m].size))
 
     def crossover(self, parent_a, parent_b, rate=0.5):
+        """Rate is the chance that genes will come from parent_b """
         child = copy.deepcopy(parent_a)
         # child = [item for item in parent_a]
         for layer in range(0, len(parent_a)):
@@ -93,7 +100,7 @@ class GeneticAlgorithm(object):
 
         # print("tournament_selection: competitors {}".format(competitors))
         # print("tournament_selection: {}".format(generation[tournament_winner]))
-        return generation[tournament_winner]
+        return generation[tournament_winner], best_fitness
 
     def create_new_generation(self,
                               current_generation,
@@ -120,14 +127,78 @@ class GeneticAlgorithm(object):
             new_gen[elites] = copy.deepcopy(current_generation[elites])
 
         for offspring in range(elitism, new_gen_size, 1):
-            parent_a = self.tournament_selection(current_generation, fitness_gen, k)
-            parent_b = self.tournament_selection(current_generation, fitness_gen, k)
-            child = self.crossover(parent_a, parent_b)
+            parent_a, fitness_a = self.tournament_selection(current_generation, fitness_gen, k)
+            parent_b, fitness_b = self.tournament_selection(current_generation, fitness_gen, k)
+            if fitness_a > fitness_b:
+                child = self.crossover(parent_a, parent_b, rate=0.3)
+            else:
+                child = self.crossover(parent_a, parent_b, rate=0.7)
             # new_gen[offspring] = [item for item in child]
             new_gen[offspring] = copy.deepcopy(child)
 
         # print(new_gen[0][1])
         return new_gen
+
+    def check_quadrant_1(self, position):
+        if position[0] >= -0.247 and position[0] <= 4.437:
+            if position[1] >= 0 and position[1] <= 0.5:
+                return True
+
+        return False
+
+    def check_quadrant_2(self, position):
+        if position[0] >= -0.247 and position[0] <= 4.437:
+            if position[1] < 0 and position[1] > -8.2:
+                return True
+
+        return False
+
+    def check_quadrant_3(self, position):
+        if position[0] < -0.27 and position[0] > -4.437:
+            if position[1] < 0 and position[1] > -8.2:
+                return True
+
+        return False
+
+    def check_quadrant_4(self, position):
+        if position[0] < -0.26 and position[0] > -4.437:
+            if position[1] >= 0 and position[1] <= 0.5:
+                return True
+
+        return False
+
+    def get_pos_fitness(self, pos):
+        distance_measure = 0
+
+        if self.check_quadrant_1(pos):
+            # print("quad 1")
+            distance_measure = abs(pos[0]) * self.reward_1
+            # print(distance_measure)
+
+        if self.check_quadrant_2(pos):
+            # print("quad 2")
+            if pos[1] > -0.6:
+                distance_measure = abs(pos[0]) * self.reward_1
+                # print(distance_measure)
+            else:
+                distance_measure = abs(pos[1]) * self.reward_2 + self.reward_1 * 4.5
+                # print(distance_measure)
+
+        if self.check_quadrant_3(pos):
+            # print("quad 3")
+            if pos[1] > -0.6:
+                distance_measure = (4.437 - abs(pos[0])) * self.reward_4 + 40.04
+                # print(distance_measure)
+            else:
+                distance_measure = (8.197 - abs(pos[1])) * self.reward_3 + 20
+                # print(distance_measure)
+
+        if self.check_quadrant_4(pos):
+            # print("quad 4")
+            distance_measure = (4.437 - abs(pos[0])) * self.reward_4 + 40.04
+            # print(distance_measure)
+
+        return distance_measure
 
     def fit_update(self, fit_val, index, laser_data, action, bumper_state, laser_front_thresh=default, laser_side_thresh=default):
         """Updates a numpy array of fitness values depending on number of
@@ -157,7 +228,8 @@ class GeneticAlgorithm(object):
 
 
     def sort_by_fitness(self, generation, fitness_vals):
-        if len(fitness_vals) is not len(generation):
+        if len(fitness_vals) != len(generation):
+            print("fv: {} gn: {}".format(len(fitness_vals), len(generation)))
             print("sort_by_fitness: Error, number of fitnesses and individuals do not match")
             print("sort_by_fitness: Not sorting")
             return
@@ -165,12 +237,13 @@ class GeneticAlgorithm(object):
         indices = np.argsort(fitness_vals)
         fitness_vals = fitness_vals[indices[::-1]]
         sorted_gen = [None]*len(generation)
-
+        # print(len(sorted_gen))
+        # print(any(x is None for x in generation))
         count = 0
         for index in indices:
             sorted_gen[count] = copy.deepcopy(generation[index])
             count+=1
-
+        # print(any(x is None for x in sorted_gen))
         # print("indices: {}".format(indices))
         return sorted_gen, fitness_vals
 
