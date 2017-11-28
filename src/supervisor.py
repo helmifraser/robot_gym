@@ -283,8 +283,8 @@ def test():
         # rospy.loginfo("laser_data: {}\n action: {}".format(laser_data, action))
 
         # Send actions to 'bot
-        twist_msg.linear.x = action[0]
-        twist_msg.angular.z = action[1]*1.2
+        twist_msg.linear.x = action[0]*0.8
+        twist_msg.angular.z = action[1]*2.5
         robot.publish_vel(twist_msg)
         node_rate.sleep()
 
